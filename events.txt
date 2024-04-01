@@ -1,0 +1,28 @@
+A node has
+  - soft state
+  - hard state
+  - pending transactions
+  - a predicted validator id
+  - a blockchain
+
+When the user creates a transaction:
+  - The transaction is created
+  - The transaction is validated (based on the soft state)
+    - If it's invalid it is discarded
+  - The soft state is updated
+  - The transaction is broadcasted (on a separate thread)
+  - The transaction is added to the list of pending transactions
+
+When a transaction is received:
+  - The transaction is validated (based on the soft state)
+    - If it's invalid it is discarded
+  - The soft state is updated
+  - The transaction is added to the list of pending transactions
+  
+When the list of pending transactions has more than BLOCK_CAPACITY transactions:
+  - If the node is not the output of proof of stake, nothing happens
+  - Otherwise the node creates a new block containing the first BLOCK_CAPACITY transactions
+    of the pending transactions vector
+
+When a block is received:
+  - The block is validated (based on the hard state)

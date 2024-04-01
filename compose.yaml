@@ -1,0 +1,117 @@
+services:
+
+  node0:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    image: block_chat_node
+    pull_policy: never
+    expose:
+      - "27736/tcp"
+      - "27737/tcp"
+    environment:
+      - BLOCK_CHAT_BOOTSTRAP_PEER_SOCKET=node0:27736
+      - BLOCK_CHAT_NETWORK_SIZE=5
+    ports:
+      - "8080:27737"
+
+  node1:
+    image: block_chat_node
+    expose:
+      - "27736/tcp"
+      - "27737/tcp"
+    environment:
+      - BLOCK_CHAT_BOOTSTRAP_PEER_SOCKET=node0:27736
+    ports:
+      - "8081:27737"
+    depends_on:
+      - node0
+
+  node2:
+    image: block_chat_node
+    expose:
+      - "27736/tcp"
+      - "27737/tcp"
+    environment:
+      - BLOCK_CHAT_BOOTSTRAP_PEER_SOCKET=node0:27736
+    ports:
+      - "8082:27737"
+    depends_on:
+      - node0
+
+  node3:
+    image: block_chat_node
+    expose:
+      - "27736/tcp"
+      - "27737/tcp"
+    environment:
+      - BLOCK_CHAT_BOOTSTRAP_PEER_SOCKET=node0:27736
+    ports:
+      - "8083:27737"
+    depends_on:
+      - node0
+
+  node4:
+    image: block_chat_node
+    expose:
+      - "27736/tcp"
+      - "27737/tcp"
+    environment:
+      - BLOCK_CHAT_BOOTSTRAP_PEER_SOCKET=node0:27736
+    ports:
+      - "8084:27737"
+    depends_on:
+      - node0
+
+  helper0:
+    build:
+      context: .
+      dockerfile: Dockerfile.helper
+    image: block_chat_helper
+    expose:
+      - "27737/tcp"
+    environment:
+      - BLOCK_CHAT_DAEMON_SOCKET=node0:27737
+      - BLOCK_CHAT_NETWORK_SIZE=5
+    depends_on:
+      - node0
+
+  helper1:
+    image: block_chat_helper
+    expose:
+      - "27737/tcp"
+    environment:
+      - BLOCK_CHAT_DAEMON_SOCKET=node1:27737
+      - BLOCK_CHAT_NETWORK_SIZE=5
+    depends_on:
+      - node1
+
+  helper2:
+    image: block_chat_helper
+    expose:
+      - "27737/tcp"
+    environment:
+      - BLOCK_CHAT_DAEMON_SOCKET=node2:27737
+      - BLOCK_CHAT_NETWORK_SIZE=5
+    depends_on:
+      - node2
+
+  helper3:
+    image: block_chat_helper
+    expose:
+      - "27737/tcp"
+    environment:
+      - BLOCK_CHAT_DAEMON_SOCKET=node3:27737
+      - BLOCK_CHAT_NETWORK_SIZE=5
+    depends_on:
+      - node3
+
+  helper4:
+    image: block_chat_helper
+    expose:
+      - "27737/tcp"
+    environment:
+      - BLOCK_CHAT_DAEMON_SOCKET=node4:27737
+      - BLOCK_CHAT_NETWORK_SIZE=5
+    depends_on:
+      - node4
