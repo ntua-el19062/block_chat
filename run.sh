@@ -1,10 +1,16 @@
 #!/bin/bash
 
-if [ -n "$1" ]; then
-  export BLOCK_CHAT_NETWORK_SIZE="$1"
+if [ -z "$1" ] then
+  echo "Usage: <bootstrap_peer_socket> [<network_size>]"
+  exit 1
 fi
 
-export BLOCK_CHAT_BOOTSTRAP_PEER_SOCKET="192.168.0.3:27736"
+export BLOCK_CHAT_BOOTSTRAP_PEER_SOCKET="$1"
+
+if [ -n "$2" ]; then
+  export BLOCK_CHAT_NETWORK_SIZE="$2"
+fi
+
 export BLOCK_CHAT_DAEMON_SOCKET="127.0.0.1:27737"
 
 cargo build --release
