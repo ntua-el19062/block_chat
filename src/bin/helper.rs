@@ -3,50 +3,46 @@ use std::{
     error::Error,
     fs,
     io::{self, BufRead as _, Read, Write as _},
-    net::{TcpStream, ToSocketAddrs},
+    net::{SocketAddr, TcpStream, ToSocketAddrs},
+    num::NonZeroU32,
     thread,
     time::Duration,
 };
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let network_size = env::var("BLOCK_CHAT_NETWORK_SIZE")
-        .unwrap_or(u32::MAX.to_string())
-        .parse::<u32>()?;
+const DAEMON_SOCKET_ENV: &str = "DAEMON_SOCKET";
+const FIXED_STAKING_ENV: &str = "FIXED_STAKING";
+const INPUT_FOLDER_ENV: &str = "INPUT_FOLDER";
 
-    let daemon_addr = env::var("BLOCK_CHAT_DAEMON_SOCKET")
-        .expect("BLOCK_CHAT_DAEMON_ADDR not set")
+fn main() -> Result<(), Box<dyn Error>> {
+    let daemon_addr = env::var(DAEMON_SOCKET_ENV)
+        .unwrap_or_else(|_| panic!("{} not set", DAEMON_SOCKET_ENV))
         .to_socket_addrs()?
         .next()
         .unwrap();
 
-    let req = serde_json::to_vec(&block_chat::protocol::Broadcast::Command(
-        block_chat::cli::Command::Id,
-    ))?;
+    let fixed_staking: NonZeroU32 = env::var(FIXED_STAKING_ENV)
+        .unwrap_or_else(|_| panic!("{} not set", FIXED_STAKING_ENV))
+        .parse::<u32>()
+        .unwrap()
+        .try_into()
+        .expect("The fixed staking must be positive");
 
-    let mut res = vec![];
+    let input_folder =
+        env::var(INPUT_FOLDER_ENV).unwrap_or_else(|_| panic!("{} not set", INPUT_FOLDER_ENV));
 
-    let mut stream;
-    loop {
-        stream = match TcpStream::connect(daemon_addr) {
-            Ok(stream) => stream,
-            Err(_) => {
-                thread::sleep(Duration::from_secs(1));
-                continue;
-            }
-        };
-
-        if stream.write_all(&req).is_err() {
-            continue;
+    let id = loop {
+        let id_cmd = block_chat::cli::Command::Id;
+        match send_cmd(id_cmd, daemon_addr) {
+            Ok(res) => break String::from_utf8(res)?,
+            Err(_) => thread::sleep(Duration::from_secs(1)),
         }
+    };
 
-        if stream.read_to_end(&mut res).is_ok() {
-            break;
-        }
-    }
-
-    let id = String::from_utf8(res)?;
-    let filename = format!("input/trans{}.txt", id);
+    let filename = format!("{}/trans{}.txt", input_folder, id);
     let file = fs::File::open(&filename)?;
+
+    let stake_cmd = block_chat::cli::Command::S { amt: fixed_staking };
+    send_cmd(stake_cmd, daemon_addr)?;
 
     println!("Helper starting; reading from {}", filename);
 
@@ -54,26 +50,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     for line in io::BufReader::new(file).lines() {
         let line = line?;
         let words = line.split_whitespace().collect::<Vec<_>>();
-        let rcp_id = words[0].strip_prefix("id").unwrap().parse::<u32>()? % network_size;
+        let rcp_id = words[0].strip_prefix("id").unwrap().parse::<u32>()?;
         let msg = words
             .iter()
             .skip(1)
             .map(|s| s.to_string())
             .collect::<Vec<_>>();
 
-        let cmd =
-            block_chat::protocol::Broadcast::Command(block_chat::cli::Command::M { rcp_id, msg });
-
-        let bytes = serde_json::to_vec(&cmd)?;
-
-        // add a random delay (up to 0.15sec) before sending the message
+        // add a random delay (up to 0.15sec) before sending each command
         thread::sleep(Duration::from_millis(rand::random::<u64>() % 150));
 
-        stream = TcpStream::connect(daemon_addr)?;
-        stream.write_all(&bytes)?;
-
-        let mut res = vec![];
-        stream.read_to_end(&mut res)?;
+        let cmd = block_chat::cli::Command::M { rcp_id, msg };
+        send_cmd(cmd, daemon_addr)?;
 
         count += 1;
     }
@@ -81,4 +69,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Helper finished; sent {} commands", count);
 
     Ok(())
+}
+
+fn send_cmd(cmd: block_chat::cli::Command, addr: SocketAddr) -> Result<Vec<u8>, Box<dyn Error>> {
+    let req = block_chat::protocol::Broadcast::Command(cmd);
+    let req_bytes = serde_json::to_vec(&req)?;
+    let mut res_bytes = vec![];
+
+    let mut stream = TcpStream::connect(addr)?;
+    stream.write_all(&req_bytes)?;
+    stream.read_to_end(&mut res_bytes)?;
+
+    Ok(res_bytes)
 }

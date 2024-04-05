@@ -1,20 +1,23 @@
 #!/bin/bash
 
-if [ -z "$1" ] then
-  echo "Usage: <bootstrap_peer_socket> [<network_size>]"
+# ./run.sh <daemon_socket> <fixed_staking> <input_folder> <bootstrap_peer_socket> [<network_size>]
+
+if [ "$#" -lt 4 ] then
+  echo "Not enough arguments supplied"
   exit 1
 fi
 
-export BLOCK_CHAT_BOOTSTRAP_PEER_SOCKET="$1"
+export DAEMON_SOCKET="$1"
+export FIXED_STAKING="$2"
+export INPUT_FOLDER="$3"
 
-if [ -n "$2" ]; then
-  export BLOCK_CHAT_NETWORK_SIZE="$2"
+export BLOCK_CHAT_BOOTSTRAP_PEER_SOCKET="$4"
+
+if [ -n "$5" ] then
+    export BLOCK_CHAT_NETWORK_SIZE="$5"
 fi
-
-export BLOCK_CHAT_DAEMON_SOCKET="127.0.0.1:27737"
 
 cargo build --release
 
-# start 2 processes, daemon and helper without waiting for any of then to finish
 ./target/release/daemon &
 ./target/release/helper
