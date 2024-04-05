@@ -1,8 +1,9 @@
 #!/bin/bash
 
+# ./run.sh  127.0.0.1:27737 10 5nodes  192.168.1.1:27736 5
 # ./run.sh <daemon_socket> <fixed_staking> <input_folder> <bootstrap_peer_socket> [<network_size>]
 
-if [ "$#" -lt 4 ] then
+if [ "$#" -lt 4 ]; then
   echo "Not enough arguments supplied"
   exit 1
 fi
@@ -13,7 +14,7 @@ export INPUT_FOLDER="$3"
 
 export BLOCK_CHAT_BOOTSTRAP_PEER_SOCKET="$4"
 
-if [ -n "$5" ] then
+if [ -n "$5" ]; then
     export BLOCK_CHAT_NETWORK_SIZE="$5"
 fi
 
