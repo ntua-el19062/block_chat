@@ -1,0 +1,11 @@
+[Unit]
+Description=BlockChat Daemon 2
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/block_chat
+ExecStart=/home/ubuntu/block_chat/target/release/daemon
+
+[Install]
+WantedBy=multi-user.target

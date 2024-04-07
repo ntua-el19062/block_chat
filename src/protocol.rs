@@ -477,6 +477,12 @@ impl<'a> Protocol<'a> {
 
                 stream.write_all(reply.as_bytes()).unwrap()
             }
+
+            Stats => {
+                let reply = History::global_stats();
+
+                stream.write_all(reply.as_bytes()).unwrap();
+            }
         }
     }
 

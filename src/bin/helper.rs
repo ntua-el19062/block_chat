@@ -58,7 +58,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .collect::<Vec<_>>();
 
         // add a random delay (up to 0.15sec) before sending each command
-        thread::sleep(Duration::from_millis(rand::random::<u64>() % 150));
+        //thread::sleep(Duration::from_millis(rand::random::<u64>() % 150));
 
         let cmd = block_chat::cli::Command::M { rcp_id, msg };
         send_cmd(cmd, daemon_addr)?;

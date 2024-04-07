@@ -77,6 +77,8 @@ pub enum Command {
     Id,
 
     Time,
+
+    Stats,
 }
 
 impl Display for Command {
@@ -91,6 +93,7 @@ impl Display for Command {
             Command::H => write!(f, "history"),
             Command::Id => write!(f, "id"),
             Command::Time => write!(f, "time"),
+            Command::Stats => write!(f, "stats"),
         }
     }
 }

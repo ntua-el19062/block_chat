@@ -1,4 +1,7 @@
-use std::fmt::{self, Display, Formatter};
+use std::{
+    collections::BTreeMap,
+    fmt::{self, Display, Formatter},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -76,6 +79,106 @@ struct Event {
 pub struct History(Vec<Event>);
 
 impl History {
+    pub fn global_stats() -> String {
+        let history = unsafe { GLOBAL_HISTORY.clone() };
+
+        // number of transactions sent by each peer
+        // create a BTreeMap with id as index and total transactions as value
+        let mut total_tsx = 0;
+        let mut txs_sent = BTreeMap::new();
+        for event in &history.0 {
+            match &event.kind {
+                EventKind::LT { .. }
+                | EventKind::LM { .. }
+                | EventKind::LS { .. }
+                | EventKind::NT { .. }
+                | EventKind::NM { .. }
+                | EventKind::NS { .. } => {
+                    total_tsx += 1;
+                    *txs_sent.entry(event.src).or_insert(0) += 1;
+                }
+                _ => (),
+            }
+        }
+
+        // number of blocks validated by each peer
+        // create a BTreeMap with id as index and total blocks as value
+        let mut toal_blk = 0;
+        let mut blk_validated = BTreeMap::new();
+        for event in &history.0 {
+            match &event.kind {
+                EventKind::LB { .. } | EventKind::NB { .. } => {
+                    toal_blk += 1;
+                    *blk_validated.entry(event.src).or_insert(0) += 1;
+                }
+                _ => (),
+            }
+        }
+
+        // number of invalid transactions sent by each peer
+        let mut total_itsx = 0;
+        let mut itsx_sent = BTreeMap::new();
+        for event in &history.0 {
+            if matches!(event.kind, EventKind::IT) {
+                total_itsx += 1;
+                *itsx_sent.entry(event.src).or_insert(0) += 1;
+            }
+        }
+
+        // number of invalid blocks validated by each peer
+        let mut total_iblk = 0;
+        let mut iblk_validated = BTreeMap::new();
+        for event in &history.0 {
+            if matches!(event.kind, EventKind::IB) {
+                total_iblk += 1;
+                *iblk_validated.entry(event.src).or_insert(0) += 1;
+            }
+        }
+
+        /*
+            Peer 0:
+                - 10 transactions sent
+                - 5 blocks validated
+                - 2 invalid transactions sent
+                - 1 invalid block validated
+
+            ...
+
+            Total:
+                - 100 transactions sent
+                - 50 blocks validated
+                - 20 invalid transactions sent
+                - 10 invalid blocks validated
+        */
+
+        let mut stats = String::new();
+        for (id, txs) in txs_sent {
+            stats.push_str(&format!(
+                "Peer {}:\n\
+                \t- {} transactions sent\n\
+                \t- {} blocks validated\n\
+                \t- {} invalid transactions sent\n\
+                \t- {} invalid blocks validated\n\n",
+                id,
+                txs,
+                blk_validated.get(&id).unwrap_or(&0),
+                itsx_sent.get(&id).unwrap_or(&0),
+                iblk_validated.get(&id).unwrap_or(&0),
+            ));
+        }
+
+        stats.push_str(&format!(
+            "Total:\n\
+            \t- {} transactions sent\n\
+            \t- {} blocks validated\n\
+            \t- {} invalid transactions sent\n\
+            \t- {} invalid blocks validated",
+            total_tsx, toal_blk, total_itsx, total_iblk
+        ));
+
+        stats
+    }
+
     pub fn global_history() -> History {
         unsafe { GLOBAL_HISTORY.clone() }
     }

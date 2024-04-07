@@ -12,7 +12,7 @@ use std::{
     time::SystemTime,
 };
 
-pub const BLOCK_CAPACITY: usize = 10;
+pub const BLOCK_CAPACITY: usize = 20;
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Block {
