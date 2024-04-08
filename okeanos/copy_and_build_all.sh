@@ -52,6 +52,14 @@ if [ "$1" != "--partial" ]; then
         ssh node$i "sudo mkdir -p /etc/systemd/system/block_chat.service.d && sudo cp ~/block_chat/override.conf /etc/systemd/system/block_chat.service.d" &
         ssh node$i "sudo mkdir -p /etc/systemd/system/block_chat_2.service.d && sudo cp ~/block_chat/override_2.conf /etc/systemd/system/block_chat_2.service.d/override.conf" &
     done
+
+    wait
+    echo ""
+
+    for i in $(seq 0 $max_node_id); do
+        echo "node$i: performing daemon reload"
+        ssh node$i "sudo systemctl daemon-reload" &
+    done
 fi
 
 wait

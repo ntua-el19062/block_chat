@@ -9,6 +9,9 @@ use std::{
     time::Duration,
 };
 
+// This binary is only used for benchmarking the application.
+// It reads a file with a list of commands and sends them to the daemon.
+
 const DAEMON_SOCKET_ENV: &str = "DAEMON_SOCKET";
 const FIXED_STAKING_ENV: &str = "FIXED_STAKING";
 const INPUT_FOLDER_ENV: &str = "INPUT_FOLDER";
@@ -56,9 +59,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             .skip(1)
             .map(|s| s.to_string())
             .collect::<Vec<_>>();
-
-        // add a random delay (up to 0.15sec) before sending each command
-        //thread::sleep(Duration::from_millis(rand::random::<u64>() % 150));
 
         let cmd = block_chat::cli::Command::M { rcp_id, msg };
         send_cmd(cmd, daemon_addr)?;

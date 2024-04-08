@@ -9,6 +9,17 @@ use crate::{
 };
 use std::ops::Deref;
 
+/*
+    The AccountsCatalog struct is responsible for managing the accounts of the peers in the network.
+    It takes a reference to a PeersCatalog and creates an account for each peer in the catalog.
+    The reason it takes a reference is to be able to have many accounts catalogs with the
+    same peers catalog thus reserving space.
+
+    The process_transaction() method is used to update the accounts of a catalog
+    based on a transaction. Similarly, the process_block() method is used to update
+    the accounts of a catalog based on the transactions a block.
+*/
+
 #[derive(Debug)]
 pub struct AccountsCatalogError {
     pub account_id: u32,
@@ -37,10 +48,6 @@ impl<'a> AccountsCatalog<'a> {
         Self { peers, accounts }
     }
 
-    pub fn leak<'b>(self) -> &'b mut Self {
-        Box::leak(Box::new(self))
-    }
-
     pub fn get_by_id(&self, id: u32) -> Option<&Account> {
         self.accounts.get(id as usize)
     }
@@ -61,6 +68,8 @@ impl<'a> AccountsCatalog<'a> {
             .and_then(|p| self.get_by_id_mut(p.id()))
     }
 
+    // update the accounts of a catalog based on a transaction
+    // leaves the catalog unchanged if an error occurs
     pub fn process_transaction(&mut self, tsx: &Transaction) -> Result<(), AccountsCatalogError> {
         // sender is None in genesis transactions
         if let Some(addr) = tsx.sndr_addr() {
@@ -87,6 +96,8 @@ impl<'a> AccountsCatalog<'a> {
         Ok(())
     }
 
+    // update the accounts of a catalog based on the transactions of a block
+    // leaves the catalog unchanged if an error occurs
     pub fn process_block(&mut self, blk: &Block) -> Result<(), AccountsCatalogError> {
         let mut self_clone = self.clone();
 

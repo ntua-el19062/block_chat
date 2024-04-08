@@ -138,6 +138,7 @@ impl Transaction {
         }
     }
 
+    // fees + amount where applicable
     pub fn total_cost(&self) -> u32 {
         match self.payload() {
             TransactionPayload::Transfer(amnt) => Self::calculate_transfer_total_cost(*amnt),

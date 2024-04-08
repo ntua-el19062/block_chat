@@ -31,11 +31,16 @@ static mut BLK_START: Option<Instant> = None;
 static mut TSX_TIMES: Vec<Duration> = vec![];
 static mut BLK_TIMES: Vec<Duration> = vec![];
 
+// the user sees coins as floating point numbers
+// but the program uses integers to avoid floating point errors
+// so whenever the user wants to create a transaction
+// a conversion is needed
 pub const CENTS_PER_COIN: u32 = 100;
 pub const TRANSFER_FEE_PERCENTAGE: u32 = 3;
 pub const MESSAGE_FEE_PER_CHARACTER_CENTS: u32 = CENTS_PER_COIN;
 pub const MINIMUM_TRANSFER_FEE_CENTS: u32 = 1;
 
+// multiplex Transactions, Blocks and Commands on the same TCP socket
 #[derive(Deserialize, Serialize)]
 pub enum Broadcast {
     Transaction(Transaction),
@@ -250,6 +255,7 @@ impl<'a> Protocol<'a> {
     }
 
     fn handle_command(&mut self, command: Command, mut stream: TcpStream) {
+        // t command
         fn new_transfer(
             protocol: &Protocol,
             recp_id: u32,
@@ -303,6 +309,7 @@ impl<'a> Protocol<'a> {
             ))
         }
 
+        // m command
         fn new_message(
             protocol: &Protocol,
             recp_id: u32,
@@ -363,6 +370,7 @@ impl<'a> Protocol<'a> {
             ))
         }
 
+        // s command
         fn new_stake(
             protocol: &Protocol,
             amnt: NonZeroU32,
@@ -393,6 +401,7 @@ impl<'a> Protocol<'a> {
             ))
         }
 
+        // b command
         fn send_balance(account: &Account, stream: &mut TcpStream) {
             let reply = format!(
                 "Balance: {} held, {} staked",
@@ -407,6 +416,7 @@ impl<'a> Protocol<'a> {
             }
         }
 
+        // v command
         fn send_last_block(blockchain: &Blockchain, stream: &mut TcpStream) {
             let reply = format!("Last block: {:#?}", blockchain.last_block());
 
@@ -417,6 +427,7 @@ impl<'a> Protocol<'a> {
             }
         }
 
+        // h command
         fn send_history(history: History, stream: &mut TcpStream) {
             let history_bytes = serde_json::to_vec(&history).expect("Failed to serialize history");
 
@@ -454,7 +465,7 @@ impl<'a> Protocol<'a> {
             // the client is not programmed to send I commands
             I => unreachable!(),
 
-            // used only by the helper to determine which file to read from
+            // used only by the helper to determine which file to read from during benchmarking
             Id => stream
                 .write_all(self.local_peer().id().to_string().as_bytes())
                 .unwrap(),
@@ -470,7 +481,7 @@ impl<'a> Protocol<'a> {
                 let blk_avg = blk_times.iter().sum::<Duration>() / blk_times.len() as u32;
 
                 let reply = format!(
-                    "Average transaction time 1: {} ms\nAverage block time 1: {} ms",
+                    "Average transaction time 1: {} ms\nAverage block time 1: {} ms\n",
                     tsx_avg.as_secs_f64() * 1000.0,
                     blk_avg.as_secs_f64() * 1000.0,
                 );
@@ -478,6 +489,7 @@ impl<'a> Protocol<'a> {
                 stream.write_all(reply.as_bytes()).unwrap()
             }
 
+            // used only for benchmarking
             Stats => {
                 let reply = History::global_stats();
 
@@ -492,7 +504,7 @@ impl<'a> Protocol<'a> {
 
             // these should never panic for locally created transactions
             // why would we create an invalid transaction?
-            #[cfg(debug_assertions)]
+            #[cfg(debug_assertions)] // == only execute in debug mode
             if let Err(e) = TransactionValidator::validate_structure(&tsx) {
                 panic!("Debug assertion failed: {}", e);
             }
@@ -506,12 +518,14 @@ impl<'a> Protocol<'a> {
         } else {
             History::log_network_transaction(&tsx, self.state().peers);
 
+            // validate the structure of the transaction (ignore context)
             if let Err(e) = TransactionValidator::validate_structure(&tsx) {
                 History::log_invalid_transaction(&tsx, self.state().peers);
                 log::warn!("Received invalid transaction:\n{}\n{:#?}", e, tsx);
                 return;
             }
 
+            // validate the semantics of the transaction (the soft_accounts is the context)
             if let Err(e) =
                 TransactionValidator::validate_semantics(&tsx, &self.state().soft_accounts)
             {
@@ -556,7 +570,7 @@ impl<'a> Protocol<'a> {
 
             // these should never panic for locally created blocks
             // why would we create an invalid block?
-            #[cfg(debug_assertions)]
+            #[cfg(debug_assertions)] // == only execute in debug mode
             if let Err(e) = BlockValidator::validate_structure(&blk) {
                 panic!("Debug assertion failed: {}", e);
             }
@@ -572,12 +586,15 @@ impl<'a> Protocol<'a> {
         } else {
             History::log_network_block(&blk, self.state().peers);
 
+            // validate the structure of the block (ignore context)
             if let Err(e) = BlockValidator::validate_structure(&blk) {
                 History::log_invalid_block(&blk, self.state().peers);
                 log::warn!("Received invalid block:\n{}\n{:#?}", e, blk);
                 return;
             }
 
+            // validate the semantics of the block
+            // (the hard_accounts and blockchain are the context)
             if let Err(e) = BlockValidator::validate_semantics(
                 &blk,
                 self.proof_of_stake(),
@@ -604,6 +621,7 @@ impl<'a> Protocol<'a> {
 
         // discard all transactions pending in the block and reprocess the rest
         self.state_mut().pending_transactions.retain(|p_tsx| {
+            // TODO: this could probably be sped up by using a HashSet, but it's not that important
             blk.tsxs().iter().all(|b_tsx| p_tsx.hash() != b_tsx.hash())
                 && if new_soft_accounts.process_transaction(p_tsx).is_err() {
                     History::log_invalid_transaction(p_tsx, peers);
@@ -622,11 +640,11 @@ impl<'a> Protocol<'a> {
             BLK_START.replace(Instant::now());
         }
 
-        // check if a new block can be minted
         self.try_mint_block();
     }
 
     fn try_mint_block(&mut self) {
+        // if the block is not full or if the node is not the validator return
         if self.state().pending_transactions.len() < BLOCK_CAPACITY
             || self.state().id != self.proof_of_stake()
         {
@@ -668,6 +686,7 @@ impl<'a> Protocol<'a> {
             return id;
         }
 
+        // the total amount of tickets in the lottery
         let stake_sum = self
             .state()
             .hard_accounts
@@ -686,6 +705,7 @@ impl<'a> Protocol<'a> {
         let seed = self.state().blockchain.last_block().hash();
         let mut rng = ChaCha12Rng::from_seed(*seed);
 
+        // select a random ticket
         let winning_ticket = rng.next_u32() % tickets;
 
         let winner_id = if stake_sum == 0 {
@@ -695,6 +715,7 @@ impl<'a> Protocol<'a> {
             self.state()
                 .hard_accounts
                 .iter()
+                // when the accumulator exceeds the winning ticket, the winner is found
                 .find(|account| {
                     acc += calculate_tickets(account.staked_cents());
                     acc > winning_ticket

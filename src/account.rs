@@ -9,6 +9,11 @@ pub enum AccountError {
 
 const BUF_LEN: usize = 32;
 
+// A NoncePool is a circular buffer that keeps track of the nonces used by an account.
+// It only accurately keeps track of the last BUF_LEN nonces used by the account.
+// Every nonce before that is considered used by default.
+// Every nonce after that is considered unused by default.
+
 #[derive(Debug, Default, Clone)]
 pub struct NoncePool {
     iter: usize,
@@ -126,6 +131,9 @@ impl NoncePool {
         false
     }
 }
+
+// An Account is a struct that represents a user account in the system.
+// It keeps track of the account's ID, nonce pool, held cents, and staked cents.
 
 #[derive(Debug, Clone)]
 pub struct Account {

@@ -10,10 +10,21 @@ use std::{
     iter::FromIterator,
 };
 
+/*
+    In this module, the PrivateKey and PublicKey structs are defined,
+    as wrappers around the rsa crate's RsaPrivateKey and RsaPublicKey structs.
+
+    They are defined as such to provide a more ergonomic API for the user,
+    and to allow for changing the implementation details in the future
+    without affecting the rest of the codebase.
+*/
+
+// how many hex digits to keep when printing out keys to the console
 const KEY_HEX_LEN: usize = 8;
 
 // private key
 
+// how many bytes to skip when encoding a private key to hex
 const PRIVATE_PKCS1_DER_HEADER_LEN: usize = 12;
 
 #[derive(Clone, Deserialize, Eq, Hash, PartialEq, Serialize)]
@@ -69,6 +80,7 @@ impl Debug for PrivateKey {
 
 // public key
 
+// how many bytes to skip when encoding a public key to hex
 const PUBLIC_PKCS1_DER_HEADER_LEN: usize = 9;
 
 #[derive(Clone, Deserialize, Eq, Hash, PartialEq, Serialize)]

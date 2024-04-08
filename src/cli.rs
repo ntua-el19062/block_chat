@@ -1,9 +1,7 @@
 /*
-    This module contains a struct representing the
-    Command Line Interface of BlockChat, along with
-    a struct representing the available commands.
-    These structs are created using the crate `clap`.
-    See its documentation to understand the syntax.
+    This module contains a struct representing the CLI of BlockChat, along with
+    a struct representing the available commands. These structs are created using the
+    crate `clap`. See its documentation to understand the syntax.
 */
 
 use clap::{Parser, Subcommand};
@@ -69,15 +67,22 @@ pub enum Command {
     #[command(name = "interactive")]
     I,
 
+    // * debug only
     /// View the history of transactions and blocks
     #[command(name = "history")]
     H,
 
+    // * debug only
+    /// View your network ID
     #[command(skip = true)]
     Id,
 
+    // * debug only
+    /// View the average time per transaction and block
     Time,
 
+    // * debug only
+    /// View the stats of the network (transactions and blocks per node)
     Stats,
 }
 

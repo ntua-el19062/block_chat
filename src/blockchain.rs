@@ -26,6 +26,8 @@ impl Blockchain {
         self.blocks.push(blk);
     }
 
+    // the blockchain will always have at least one block
+    // so this helps avoid unwrapping every time we need the last block
     pub fn last_block(&self) -> &Block {
         self.blocks.last().unwrap()
     }

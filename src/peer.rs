@@ -6,6 +6,8 @@ use crate::crypto::PublicKey;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 
+// A Peer is just a struct that holds an ID, a public key, and a socket address.
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Peer {
     id: u32,

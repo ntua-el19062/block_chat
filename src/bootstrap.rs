@@ -51,6 +51,9 @@ pub fn bootstrap_network(
         .next()
         .unwrap();
 
+    // bind both listeners before sending the join request
+    // the network listener is bound here to avoid missing any transactions
+    // sent by peers who happened to connect before the join response is sent
     let (bs_listener, bs_port) = bind_listener(bootstrap_port).unwrap();
     let (net_listener, net_port) = bind_listener(network_port).unwrap();
 
@@ -59,13 +62,16 @@ pub fn bootstrap_network(
     let (peers_info, blockchain) = match discover_peers(bs_listener, total_peers, publ_key.clone())
     {
         (peers_info, Some(blockchain)) => (peers_info, blockchain),
+        // if no blockchain is received, initialize a new one (we are the bootstrap peer)
         (peers_info, None) => {
             let blockchain = init_blockchain(&peers_info, NonZeroU32::new(cents_per_peer).unwrap());
+            // send the peers_info and blockchain to the other peers
             send_join_responses(peers_info.clone(), blockchain.clone());
             (peers_info, blockchain)
         }
     };
 
+    // initialize the peeers catalog from the received peers_info
     let mut catalog = PeersCatalog::new();
     for peer in peers_info {
         catalog
@@ -127,6 +133,10 @@ fn send_join_request(
     });
 }
 
+// returns a vec containing info about the peers in the network
+// the first entry is the bootstrap peer
+// also returns a blockchain if the bootstrap peer is not us
+// otherwise None
 fn discover_peers(
     listener: TcpListener,
     total_peers: u16,
@@ -154,6 +164,7 @@ fn discover_peers(
         };
 
         let peer_info = match message {
+            // if a join request is received, we are the bootstrap peer
             BootstrapMessage::JoinRequest {
                 publ_key,
                 net_port,
@@ -165,6 +176,7 @@ fn discover_peers(
                 bs_port,
             },
 
+            // if a join response is received, we are not the bootstrap peer
             BootstrapMessage::JoinResponse {
                 peers_info,
                 blockchain,
@@ -173,6 +185,11 @@ fn discover_peers(
             }
         };
 
+        // only the bootstrap peer will execute the following code
+        // so the peer moves its entry to the front of the vec
+        // to dignify that it's the bootstrap peer
+        // this does not affect the system in any way other
+        // than ensuring that the bootstrap peer will have an ID of 0
         if !added_self && peer_info.publ_key == publ_key {
             discovered_peers.push(peer_info);
             let last = discovered_peers.len() - 1;

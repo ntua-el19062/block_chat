@@ -3,6 +3,16 @@ use crate::crypto::PublicKey;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, net::SocketAddr, slice::Iter};
 
+/*
+    The PeersCatalog struct is responsible for managing the peers in the network.
+    It exposes an API to access peers by ID or public key,
+    but under the hood the peers are kept in a vector sorted by ID to make the access faster.
+    To facilitate accessing peers by public key, a hash map is used to map public keys to peer IDs.
+
+    The leak() method can be used to make a PeersCatalog static, which is very useful
+    when working with rust threads, which require static lifetimes.
+*/
+
 #[derive(Debug)]
 pub enum PeersCatalogError {
     DuplicateEntry(Box<(PublicKey, SocketAddr)>),

@@ -12,36 +12,43 @@ use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream, ToSocketAddrs as _},
 };
 
+// environment variable to set the logging level
 const LOGGIN_LEVEL_ENV: &str = "BLOCK_CHAT_CLIENT_LOGGING_LEVEL";
-const FALLBACK_LOGGING_LEVEL: &str = "warn";
+const DEFAULT_LOGGING_LEVEL: &str = "warn";
 
+// environment variables to set the daemon address (defaults to `localhost:27737`)
 const DAEMON_SOCKET_ENV: &str = "BLOCK_CHAT_DAEMON_SOCKET";
 const DAEMON_PORT_ENV: &str = "BLOCK_CHAT_DAEMON_PORT";
 const DEFAULT_DAEMON_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 const DEFAULT_DAEMON_PORT: u16 = 27737;
 
 fn main() -> io::Result<()> {
-    // display message if arguments are incorrect
+    // display message if arguments are incorrect (clap does this automatically)
     let command = Args::parse().cmd;
 
+    // initialize logger and daemon address
     init_logger();
     let daemon_addr = init_daemon_addr();
 
     log::debug!("Daemon address: {}", daemon_addr);
 
+    // interactive mode: accept commands from stdin
     if matches!(command, Command::I) {
-        interactive_mode(daemon_addr);
+        interactive_mode(daemon_addr); // this function returns when the user types 'exit'
         return Ok(());
     }
 
+    // if not interactive, just send the command and wait for the response
     let response = send_command_receive_response(command.clone(), daemon_addr)?;
 
     if matches!(command, Command::H) {
+        // when the command is 'history' the response has to be deserialized
         let response: History =
             serde_json::from_slice(&response).expect("Failed to deserialize response");
 
         println!("{}", response);
     } else {
+        // when the command is not 'history' the response is just a string
         println!("{}", String::from_utf8(response).unwrap());
     }
 
@@ -49,7 +56,7 @@ fn main() -> io::Result<()> {
 }
 
 fn init_logger() {
-    let env = Env::new().filter_or(LOGGIN_LEVEL_ENV, FALLBACK_LOGGING_LEVEL);
+    let env = Env::new().filter_or(LOGGIN_LEVEL_ENV, DEFAULT_LOGGING_LEVEL);
     env_logger::init_from_env(env);
 }
 
@@ -94,6 +101,8 @@ fn interactive_mode(daemon_addr: SocketAddr) {
             break;
         }
 
+        // example: [ "client", "t", "1", "100" ]
+        // the first element is the program name, the rest are the arguments
         let args = iter::once("client")
             .chain(line.split_whitespace())
             .collect::<Vec<&str>>();

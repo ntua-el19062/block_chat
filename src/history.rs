@@ -17,6 +17,9 @@ use crate::{
 
 static mut GLOBAL_HISTORY: History = History(vec![]);
 
+// A struct to keep track of the history of the blockchain
+// used only for debugging purposes.
+
 /*
     The following are considered noteworthy events:
     - a transaction (transfer, message, stake) is created locally
@@ -136,45 +139,44 @@ impl History {
         }
 
         /*
-            Peer 0:
-                - 10 transactions sent
-                - 5 blocks validated
-                - 2 invalid transactions sent
-                - 1 invalid block validated
+            Peer 0 made 10 transactions and validated 5 blocks
+            [Peer 0 made 3 invalid transactions and validated 2 invalid blocks]
 
             ...
 
-            Total:
-                - 100 transactions sent
-                - 50 blocks validated
-                - 20 invalid transactions sent
-                - 10 invalid blocks validated
+            In total, 100 transactions were made and 50 blocks were validated
         */
 
         let mut stats = String::new();
         for (id, txs) in txs_sent {
             stats.push_str(&format!(
-                "Peer {}:\n\
-                \t- {} transactions sent\n\
-                \t- {} blocks validated\n\
-                \t- {} invalid transactions sent\n\
-                \t- {} invalid blocks validated\n\n",
+                "Peer {} made {} transactions and validated {} blocks\n",
                 id,
                 txs,
                 blk_validated.get(&id).unwrap_or(&0),
-                itsx_sent.get(&id).unwrap_or(&0),
-                iblk_validated.get(&id).unwrap_or(&0),
             ));
+
+            if itsx_sent.get(&id).is_some() || iblk_validated.get(&id).is_some() {
+                stats.push_str(&format!(
+                    "Peer {} made {} invalid transactions and validated {} invalid blocks\n",
+                    id,
+                    itsx_sent.get(&id).unwrap_or(&0),
+                    iblk_validated.get(&id).unwrap_or(&0),
+                ));
+            }
         }
 
         stats.push_str(&format!(
-            "Total:\n\
-            \t- {} transactions sent\n\
-            \t- {} blocks validated\n\
-            \t- {} invalid transactions sent\n\
-            \t- {} invalid blocks validated",
-            total_tsx, toal_blk, total_itsx, total_iblk
+            "In total, {} transactions were made and {} blocks were validated\n",
+            total_tsx, toal_blk,
         ));
+
+        if total_itsx > 0 || total_iblk > 0 {
+            stats.push_str(&format!(
+                "In total, {} invalid transactions were made and {} invalid blocks were validated\n",
+                total_itsx, total_iblk,
+            ));
+        }
 
         stats
     }

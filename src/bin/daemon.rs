@@ -9,20 +9,28 @@ use std::{
     net::{SocketAddr, ToSocketAddrs},
 };
 
+// environment variable to set the logging level
 const LOGGIN_LEVEL_ENV: &str = "BLOCK_CHAT_DAEMON_LOGGING_LEVEL";
-const FALLBACK_LOGGING_LEVEL: &str = "warn";
+const DEFAULT_LOGGING_LEVEL: &str = "warn";
 
+// environment variable to set the bootstrap peer address
+// if it is not set, the daemon will panic
 const BOOTSTRAP_PEER_SOCKET_ENV: &str = "BLOCK_CHAT_BOOTSTRAP_PEER_SOCKET";
 
-const BOOTTSRAP_PORT_ENV: &str = "BLOCK_CHAT_BOOTSTRAP_PORT";
+// environment variable to set the port for the bootstrapping process
+const BOOTSTRAP_PORT_ENV: &str = "BLOCK_CHAT_BOOTSTRAP_PORT";
 const DEFAULT_BOOTSTRAP_PORT: u16 = 27736;
 
+// environment variable to set the port to be used for communicating with other peers and the client
 const NETWORK_PORT_ENV: &str = "BLOCK_CHAT_NETWORK_PORT";
 const DEFAULT_NETWORK_PORT: u16 = 27737;
 
+// environment variable to set the size of the network
+// this only matters for the bootstrap peer
 const NETWORK_SIZE_ENV: &str = "BLOCK_CHAT_NETWORK_SIZE";
 const DEFAULT_NETWORK_SIZE: u16 = 5;
 
+// coins each peer will have when the network is initialized
 const INIT_COINS_PER_PEER: u32 = 1000;
 
 const RSA_BITS: usize = 2048;
@@ -39,6 +47,7 @@ fn main() {
     log::debug!("Network port: {}", network_port);
     log::debug!("Network size: {}", network_size);
 
+    // generate a new RSA private key
     let priv_key = PrivateKey::from(RsaPrivateKey::new(&mut rand::thread_rng(), RSA_BITS).unwrap());
 
     let config = ProtocolConfig {
@@ -49,13 +58,13 @@ fn main() {
         network_port,
     };
 
+    // create a new protocol instance and run it
     let mut protocol = Protocol::new(priv_key);
-
-    protocol.run(config);
+    protocol.run(config); // this will only exit if a fatal error occurs
 }
 
 fn init_logger() {
-    let env = Env::new().filter_or(LOGGIN_LEVEL_ENV, FALLBACK_LOGGING_LEVEL);
+    let env = Env::new().filter_or(LOGGIN_LEVEL_ENV, DEFAULT_LOGGING_LEVEL);
     env_logger::init_from_env(env);
 }
 
@@ -79,11 +88,11 @@ fn init_bootstrap_peer_addr() -> SocketAddr {
 }
 
 fn init_bootstrap_port() -> u16 {
-    env::var(BOOTTSRAP_PORT_ENV).map_or(DEFAULT_BOOTSTRAP_PORT, |port| {
+    env::var(BOOTSTRAP_PORT_ENV).map_or(DEFAULT_BOOTSTRAP_PORT, |port| {
         port.parse().unwrap_or_else(|_| {
             panic!(
                 "Environment variable `{}` could not be parsed as a valid port number",
-                BOOTTSRAP_PORT_ENV
+                BOOTSTRAP_PORT_ENV
             )
         })
     })
