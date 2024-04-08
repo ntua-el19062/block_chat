@@ -14,6 +14,24 @@ const BUF_LEN: usize = 32;
 // Every nonce before that is considered used by default.
 // Every nonce after that is considered unused by default.
 
+/*
+    * Why use a circular buffer instead of a single integer?
+
+    Suppose node0 and node1 are the only two nodes in the network.
+    node0 validates a block containing [ n1-nonce0, n1-nonce1, n1-nonce3 ] because
+    due a network error, it didn't receive n1-nonce2.
+    On receiving the block, node1 will mark n1-nonce2 as invalid, since it will be
+    a lower number than the next nonce it expects.
+    This does not violate the correctness of the system, but it is annoying for the users.
+    Using a circular buffer avoids that for up to BUF_LEN nonces.
+
+    * Why use a circular buffer instead of a hash set?
+
+    Less and completely prectable memory usage. It's very unlikely that a similar scenario
+    to the one described above will happen with a nonce difference of more than BUF_LEN.
+    So, using a hash set practically provides little to no benefit over a circular buffer.
+*/
+
 #[derive(Debug, Default, Clone)]
 pub struct NoncePool {
     iter: usize,

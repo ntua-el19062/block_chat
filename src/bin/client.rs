@@ -8,7 +8,6 @@ use env_logger::Env;
 use std::{
     env,
     io::{self, Read as _, Write as _},
-    iter,
     net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream, ToSocketAddrs as _},
 };
 
@@ -32,13 +31,7 @@ fn main() -> io::Result<()> {
 
     log::debug!("Daemon address: {}", daemon_addr);
 
-    // interactive mode: accept commands from stdin
-    if matches!(command, Command::I) {
-        interactive_mode(daemon_addr); // this function returns when the user types 'exit'
-        return Ok(());
-    }
-
-    // if not interactive, just send the command and wait for the response
+    // send the command and wait for the response
     let response = send_command_receive_response(command.clone(), daemon_addr)?;
 
     if matches!(command, Command::H) {
@@ -86,52 +79,6 @@ fn init_daemon_addr() -> SocketAddr {
     };
 
     SocketAddr::new(DEFAULT_DAEMON_IP, DEFAULT_DAEMON_PORT)
-}
-
-fn interactive_mode(daemon_addr: SocketAddr) {
-    loop {
-        print!("Enter a command (or 'exit'): ");
-        io::stdout().flush().unwrap();
-
-        let mut line = String::new();
-        io::stdin().read_line(&mut line).unwrap();
-
-        if line.trim() == "exit" {
-            println!(); // add missing newline
-            break;
-        }
-
-        // example: [ "client", "t", "1", "100" ]
-        // the first element is the program name, the rest are the arguments
-        let args = iter::once("client")
-            .chain(line.split_whitespace())
-            .collect::<Vec<&str>>();
-
-        let command = match Args::try_parse_from(args) {
-            Ok(args) => args.cmd,
-            Err(e) => {
-                eprintln!("{}", e);
-                continue;
-            }
-        };
-
-        let response = match send_command_receive_response(command.clone(), daemon_addr) {
-            Ok(response) => response,
-            Err(e) => {
-                eprintln!("Failed to send command: {}", e);
-                continue;
-            }
-        };
-
-        if matches!(command, Command::H) {
-            let response: History =
-                serde_json::from_slice(&response).expect("Failed to deserialize response");
-
-            println!("{}", response);
-        } else {
-            println!("{}", String::from_utf8(response).unwrap());
-        }
-    }
 }
 
 fn send_command_receive_response(cmd: Command, addr: SocketAddr) -> io::Result<Vec<u8>> {

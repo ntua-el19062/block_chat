@@ -63,10 +63,6 @@ pub enum Command {
     #[command(name = "balance")]
     B,
 
-    /// Enter interactive mode
-    #[command(name = "interactive")]
-    I,
-
     // * debug only
     /// View the history of transactions and blocks
     #[command(name = "history")]
@@ -94,7 +90,6 @@ impl Display for Command {
             Command::S { amt } => write!(f, "stake {}", amt),
             Command::V => write!(f, "view"),
             Command::B => write!(f, "balance"),
-            Command::I => write!(f, "interactive"),
             Command::H => write!(f, "history"),
             Command::Id => write!(f, "id"),
             Command::Time => write!(f, "time"),

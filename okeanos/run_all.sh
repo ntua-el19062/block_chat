@@ -2,11 +2,12 @@
 
 # parameters
 bc1_daemon_socket="127.0.0.1:27737"
-bc2_daemon_socket="127.0.0.1:27739"
+bc2_daemon_socket="127.0.0.1:27739" # 10 nodes only
 fixed_staking="10"
 greater_staking="100"
 input_folder="inputs/5nodes"
 
+# change input folder for 10 nodes
 if [ "$1" == "--10" ]; then
     input_folder="inputs/10nodes"
 fi
@@ -40,6 +41,8 @@ done
 wait
 echo ""
 
+# start the helpers first
+# they do nothing until the daemons reply to their requests
 for i in $(seq 0 $max_node_id); do
     echo "node$i: starting helper(s)"
 
@@ -57,10 +60,12 @@ done
 # don't wait
 echo ""
 
+# start the daemons
 for i in $(seq 0 $max_node_id); do
     echo "node$i: starting daemon(s)"
     ssh node$i "sudo systemctl start block_chat" &
 
+    # start the second daemon on each node when --10 is passed
     if [ "$1" == "--10" ]; then
         ssh node$i "sudo systemctl start block_chat_2" &
     fi

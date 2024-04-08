@@ -462,9 +462,6 @@ impl<'a> Protocol<'a> {
             V => send_last_block(&self.state().blockchain, &mut stream),
             H => send_history(History::global_history(), &mut stream),
 
-            // the client is not programmed to send I commands
-            I => unreachable!(),
-
             // used only by the helper to determine which file to read from during benchmarking
             Id => stream
                 .write_all(self.local_peer().id().to_string().as_bytes())
