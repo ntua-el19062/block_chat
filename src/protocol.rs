@@ -478,7 +478,7 @@ impl<'a> Protocol<'a> {
                 let blk_avg = blk_times.iter().sum::<Duration>() / blk_times.len() as u32;
 
                 let reply = format!(
-                    "Average transaction time 1: {} ms\nAverage block time 1: {} ms\n",
+                    "Average transaction time: {} ms\nAverage block time: {} ms\n",
                     tsx_avg.as_secs_f64() * 1000.0,
                     blk_avg.as_secs_f64() * 1000.0,
                 );
