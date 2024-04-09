@@ -211,10 +211,9 @@ impl<'a> Protocol<'a> {
         let (tx, rx): (Sender<(Broadcast, TcpStream)>, _) = mpsc::channel();
         spawn_listener_thread(network_listener, tx);
 
-        // sloppy code only used for benchmarking
         unsafe {
-            BLK_START.replace(Instant::now());
             TSX_START.replace(Instant::now());
+            BLK_START.replace(Instant::now());
         }
 
         // main loop
